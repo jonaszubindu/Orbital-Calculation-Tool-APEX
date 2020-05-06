@@ -22,22 +22,23 @@ from classes import constants as const
 # vx_init = -y_init*const.omega
 
 R = 1200
-phi = np.linspace(0,np.pi*2,10)
+phi = np.linspace(0,np.pi*2,4)
 x_init = R*np.cos(phi)
 y_init = R*np.sin(phi)
 
-vy_init = np.linspace(-0.1,+0.1,3)
+vy_init = -const.omega*R*np.sin(phi)
 # vy_init = 
-vx_init = -y_init*const.omega
+vx_init = const.omega*R*np.cos(phi)
 
 # VX_init, VY_init = np.meshgrid(x_init,y_init)
 
 with open('Initial_Conditions.json', 'w') as Init:
-    for xy in (x_init,y_init):
+    for x,y,vx,vy in zip(x_init,y_init,vx_init,vy_init):
         # for y in y_init:
-        x = xy[0]
-        y = xy[1] 
-        for vx in vx_init:
-            for vy in vy_init:
-                json.dump({"x0": x, "y0": y, "z0": 0, "vx0": vx, "vy0": vy, "vz0": 0, "Sunr0": 1, "Sun": 0, "Shadow": 0, "plotting": 1}, Init)
-                Init.write('\n')
+        # x = xy[0]
+        # y = xy[1] 
+        # # for vy in vy_init:
+        # vx = vxy[0]
+        # vy = vxy[1]
+        json.dump({"x0": x, "y0": y, "z0": 0, "vx0": vx, "vy0": vy, "vz0": 0, "Sunr0": 1, "Sun": 0, "Shadow": 0, "plotting": 1}, Init)
+        Init.write('\n')

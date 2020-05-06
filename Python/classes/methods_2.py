@@ -137,8 +137,7 @@ def Kepler(E, t, variables):
 
         ####################################
         #                                  #
-        # Differential Equation APEX       #
-        # and Time Loop                    #
+        #   Differential Equation APEX     #
         #                                  #
         ####################################
 
@@ -673,9 +672,10 @@ class Initial_Conditions:
         self.t0 = const.t0
         self.plotting = plotting
     
-        self.r_Didymoon_x0 = variables.r_Didymoon_x[0] = const.a-const.a*const.e
-        self.r_Didymoon_y0 = variables.r_Didymoon_y[0] = 0
-        self.r_Didymoon_z0 = variables.r_Didymoon_z[0] = 0
+        self.r_Didymoon_x0 = variables.r_Didymoon_i[0][0] = variables.r_Didymoon_x[0] = const.a-const.a*const.e
+        self.r_Didymoon_y0 = variables.r_Didymoon_i[1][0] = variables.r_Didymoon_y[0] = 0
+        self.r_Didymoon_z0 = variables.r_Didymoon_i[2][0] = variables.r_Didymoon_z[0] = 0
+        
         self.Shadow = Shadow
         self.Sun = Sun
         
@@ -705,19 +705,20 @@ class Initial_Conditions:
     def wrap(self, variables):
         self.vy0 = np.array([self.vAPEX_x0, self.vAPEX_y0, self.vAPEX_z0, self.rAPEX_x0, self.rAPEX_y0, self.rAPEX_z0], dtype = float)
         variables.r_Didymoon_r[0],_ ,_ = cart_to_sph(variables.r_Didymoon_x[0], variables.r_Didymoon_y[0], variables.r_Didymoon_z[0])
+        
         if const.e == 0 and variables.r_Didymoon_r[0] == const.a:
             arg = 0
         else:
             arg = (1-variables.r_Didymoon_r[0]/const.a)/const.e
-        if arg <= 1 and arg >= -1:
-            arg = arg
-        elif arg > 1 and arg < 1.1:
-            arg = 1
-        elif arg < -1 and arg > -1.1:
-            arg = -1
-        else:
-            raise TypeError("Error: argument for E invalid")
-            #print("Error: argument for E invalid")
+            if arg <= 1 and arg >= -1:
+                arg = arg
+            elif arg > 1 and arg < 1.1:
+                arg = 1
+            elif arg < -1 and arg > -1.1:
+                arg = -1
+            else:
+                raise TypeError("Error: argument for E invalid")
+                #print("Error: argument for E invalid")
         E0 = np.arccos(arg)
         if self.r_Didymoon_x0>=0 and self.r_Didymoon_y0>=0:
             self.E = E0

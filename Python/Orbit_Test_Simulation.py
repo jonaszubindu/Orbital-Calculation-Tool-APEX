@@ -166,6 +166,7 @@ Args = []
 Orbit_Times = []
 Stable_Orbits = []
 Stable_Orbits_Initialconditions = []
+Orbits = []
 itern = 0
 stable = 0
 for kwargs in kwargs_list:
@@ -194,18 +195,39 @@ for kwargs in kwargs_list:
             
         stop = timeit.timeit()
         time_orbit_calc = stop - start
-# with concurrent.futures.ProcessPoolExecutor() as executer:
-#     rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = executer.map(Orbital_Calculation, Args) 
+        
+        # import multiprocessing
+        
+        # def f(name):
+        #     print 'hello', name
+        
+        # if __name__ == '__main__':
+        #     pool = multiprocessing.Pool() #use all available cores, otherwise specify the number you want as an argument
+        #     for i in xrange(0, 512):
+        #         pool.apply_async(f, args=(i,))
+        #     pool.close()
+        #     pool.join()
+        # multiprocessing.cpu_count()-1 or 1
+        #        
+        # with concurrent.futures.ProcessPoolExecutor() as executer:
+        #     rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = executer.map(Orbital_Calculation, Args) 
+        
         Orbit_Times.append(time_orbit_calc)
+        Orbits.append(Var)
         if unstable == 0:
             stable += 1
             Stable_Orbits.append(Var)
             Stable_Orbits_Initialconditions.append(kwarg)
         ax1.plot(Var.rAPEX_x_corot[0:Var.tn], Var.rAPEX_y_corot[0:Var.tn], linewidth=1, color = 'k')
             
-# with open('Stable_Orbits.json', 'w')  as Orbits:
+# with open('Stable_Orbits_Initials.json', 'w')  as Orbits:
 #     for Init_elem in Stable_Orbits_Initialconditions:
-#         json.dump(Init_elem, Orbits)
+#         json.dump(Init_elem, Orbits, indent=2)
+#         Orbits.write('\n')
+
+# with open('Stable_Orbits_Var.json', 'w')  as Orbits:
+#     for var in Stable_Orbits:
+#         json.dump(var, Orbits, indent=2)
 #         Orbits.write('\n')
 
 Didymos_shape2 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
@@ -382,7 +404,11 @@ fig1.savefig(file_name1, format='eps')
 # plt.show()
     
     
-"Contour Plots"
+"""
+
+Contour Plots to visualize the gravitational potential contour lines, obtionally also the force vectors acting in the different regions
+
+"""
     
 # textstr = ""
 # file_name = ""

@@ -14,7 +14,7 @@ reload the program.
 """
 #import matplotlib.pyplot as plt
 #from matplotlib import animation
-# import os
+import os
 
 import time
 # import sys
@@ -40,8 +40,11 @@ import numpy as np
 import logging
 
 from matplotlib import patches, ticker
+from joblib import Parallel, delayed
 import json
-# import concurrent.futures
+import concurrent.futures
+
+os.system('rm Orbit_Test_Simulation.log')
 logging.basicConfig(filename='Orbit_Test_Simulation.log', level= logging.DEBUG)
 kwargs_list = []
 
@@ -52,7 +55,9 @@ with open('Initial_Conditions.json', 'r') as inits: #Writing initial conditions 
 # with open('Stable_Orbits.json', 'r') as inits: #Writing initial conditions from JSON file to a list
 #     for line in inits:
 #         kwargs_list.append(json.loads(line))
-
+def do_smth_arbitrary(sec):
+    time.sleep(sec)
+    print("hello world!")
 
 
 "Main od"
@@ -159,67 +164,79 @@ ax1.set_xlabel("x-coordinate")
 ax1.set_ylabel("y-coordinate")
 ax1.set_title("Orbit of APEX in corotating frame")
 
-
 "Loop that executes the simulation "
 
-Args = []
-Orbit_Times = []
-Stable_Orbits = []
-Stable_Orbits_Initialconditions = []
-Orbits = []
-itern = 0
-stable = 0
+Args = [] #Store the initial conditions from kwargs_list
+Orbit_Times = [] # Store the computation time of each orbit calculation
+Stable_Orbits = [] # Store the stable orbits
+Orbits = [] # Store any computed orbit
+Var = [] # Store any initialized orbit variables (used for parallel computation)
+Initials = [] # Store all initial conditions initialized (used for parallel computation)
+# results = [] # Store the results calculated by the parallel computation
+itern = 0 # count the number of orbits computed
+Stable = 0 # count the number of stable orbits
+
+def run_orbit_sim(Orbital_Calculation, initials, var, kwarg):
+    stable = 0
+    start = timeit.timeit()
+    try:    
+        unstable, str_elem, rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = Orbital_Calculation(initials, var, kwarg)
+    except Exception:
+        str_elem = ""
+        for elem in kwarg.keys():
+            str_elem = str_elem + elem + ':' + str(kwarg[elem]) + ' '
+        print('Orbit not computable for ' + str_elem + 'continuing with next orbit...')
+    
+    
+    if unstable == 0:
+        stable = 1
+    
+    stop = timeit.timeit()
+    time_orbit_calc = stop - start
+    orbit = var
+    return stable, orbit, time_orbit_calc
+
+
+
 for kwargs in kwargs_list:
     print("Number of sets of initial conditions: ", itern, ":",len(kwargs_list))
     args = np.array([kwargs], dtype = object)
+    var_init = var.Variables(const.N)
+    
     for kwarg in args:
-        Var = var.Variables(const.N)
-        Initials = meth.Initial_Conditions(Var, **kwarg)
-        Initials.initialize_initial_conditions(Var)
-        Initials.wrap(Var)
-        Args.append((Initials, Var, kwarg))
-        "Initializing Kepler Orbit and choosing initial conditions"
-        # if Var.Kep == 0:
-        #     r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tk = meth.Kepler(Initials.E, const.T_max, Var)
-        # time.sleep(1)
-        itern +=1
-        Var.E_end = Initials.E
-        start = timeit.timeit()
-        try:    
-            unstable, str_elem, rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = Orbital_Calculation(Initials, Var, kwarg)
-        except Exception:
-            str_elem = ""
-            for elem in kwarg.keys():
-                str_elem = str_elem + elem + ':' + str(kwarg[elem]) + ' '
-            print('Orbit not computable for ' + str_elem + 'continuing with next orbit...')
-            
-        stop = timeit.timeit()
-        time_orbit_calc = stop - start
-        
-        # import multiprocessing
-        
-        # def f(name):
-        #     print 'hello', name
-        
-        # if __name__ == '__main__':
-        #     pool = multiprocessing.Pool() #use all available cores, otherwise specify the number you want as an argument
-        #     for i in xrange(0, 512):
-        #         pool.apply_async(f, args=(i,))
-        #     pool.close()
-        #     pool.join()
-        # multiprocessing.cpu_count()-1 or 1
-        #        
-        # with concurrent.futures.ProcessPoolExecutor() as executer:
-        #     rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = executer.map(Orbital_Calculation, Args) 
-        
-        Orbit_Times.append(time_orbit_calc)
-        Orbits.append(Var)
-        if unstable == 0:
-            stable += 1
-            Stable_Orbits.append(Var)
-            Stable_Orbits_Initialconditions.append(kwarg)
-        ax1.plot(Var.rAPEX_x_corot[0:Var.tn], Var.rAPEX_y_corot[0:Var.tn], linewidth=1, color = 'k')
-            
+        initials = meth.Initial_Conditions(var_init, **kwarg)
+    initials.initialize_initial_conditions(var_init)
+    initials.wrap(var_init)
+    Args.append(kwarg)
+    "Choosing initial conditions"
+    itern +=1
+    var_init.E_end = initials.E
+    Var.append(var_init)
+    Initials.append(initials)
+    # stable, orbit, time_orbit_calc = run_orbit_sim(Orbital_Calculation, initials, var_init, kwarg)
+    # Orbit_Times.append(time_orbit_calc)
+    # if stable == 1:
+    #     Stable += 1
+    #     Stable_Orbits.append(orbit)
+    # Orbits.append(orbit)
+    # ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
+
+"Parallelization of computation of orbits"
+# 
+results = Parallel(n_jobs = 4)(delayed(run_orbit_sim)(Orbital_Calculation, initials, var_ele, kwarg) for initials, var_ele, kwarg in zip(Initials, Var, Args))
+for result in results:
+    stable = result[0]
+    orbit = result[1] 
+    time_orbit_calc = result[2]
+    Orbit_Times.append(time_orbit_calc)
+    if stable == 1:
+        Stable += 1
+        Stable_Orbits.append(orbit)
+    Orbits.append(orbit)
+    ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
+
+
+"Storing data, work in progress"
 # with open('Stable_Orbits_Initials.json', 'w')  as Orbits:
 #     for Init_elem in Stable_Orbits_Initialconditions:
 #         json.dump(Init_elem, Orbits, indent=2)
@@ -230,11 +247,12 @@ for kwargs in kwargs_list:
 #         json.dump(var, Orbits, indent=2)
 #         Orbits.write('\n')
 
+"Continue Plotting here"
 Didymos_shape2 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
-Didymoon_shape2 = patches.Circle(xy = (r_Didymoon_x[0],0), radius = const.RadDM)
+Didymoon_shape2 = patches.Circle(xy = (Var[0].r_Didymoon_x[0],0), radius = const.RadDM)
 ax1.add_patch(Didymos_shape2)
 ax1.add_patch(Didymoon_shape2)
-unstable = len(kwargs_list) - stable
+Unstable = len(kwargs_list) - Stable
 
 textstr1 = ""
 file_name1 = ""
@@ -247,8 +265,8 @@ else:
     Text_box1.append('Kepler Orbit Didymoon')
 if len(kwargs_list)>1:
     distr = 3
-    Text_box1.append('Number of stable orbits out of total: ' + str(stable) + ':' + str(len(kwargs_list)))
-    Text_box1.append('Number of unstable orbits out of total: ' + str(unstable) + ':' + str(len(kwargs_list)))
+    Text_box1.append('Number of stable orbits out of total: ' + str(Stable) + ':' + str(len(kwargs_list)))
+    Text_box1.append('Number of unstable orbits out of total: ' + str(Unstable) + ':' + str(len(kwargs_list)))
 if kwarg['Sun'] == 1:
     Text_box1.append('Solar radiation pressure on')
 else:

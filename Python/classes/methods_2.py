@@ -176,12 +176,12 @@ def fun(tim, v_i, var):
     R_Sun[1] = var.R_Sun_y[var.tn]
     R_Sun[2] = var.R_Sun_z[var.tn]
     
-    n_surf1[0] = n_surf1_x = np.cos(30)*r_i[0]-np.sin(30)*r_i[1]
-    n_surf1[1] = n_surf1_y = np.sin(30)*r_i[0]-np.sin(30)*r_i[1]
+    n_surf1[0] = n_surf1_x = np.cos(60)*r_i[0]-np.sin(60)*r_i[1]
+    n_surf1[1] = n_surf1_y = np.sin(60)*r_i[0]+np.cos(60)*r_i[1]
     n_surf1[2] = n_surf1_z = r_i[2]
 
-    n_surf2[0] = n_surf2_x = np.cos(-30)*r_i[0]-np.sin(-30)*r_i[1]
-    n_surf2[1] = n_surf2_y = np.sin(-30)*r_i[0]-np.sin(-30)*r_i[1]
+    n_surf2[0] = n_surf2_x = np.cos(-60)*r_i[0]-np.sin(-60)*r_i[1]
+    n_surf2[1] = n_surf2_y = np.sin(-60)*r_i[0]+np.cos(-60)*r_i[1]
     n_surf2[2] = n_surf2_z = r_i[2]
     
     cos_il1 = ilangle_cos(n_surf1_x,n_surf1_y,n_surf1_z,R_Sun[0],R_Sun[1],R_Sun[2])
@@ -342,6 +342,7 @@ def Phi(x, y, z, var, grad2 = 1, g_main = 1, g_sec = 1, corot = 1):
     #     drdt[i] = v_i[i]
     
     # return [dvdt[0], dvdt[1], dvdt[2], drdt[0], drdt[1], drdt[2]]
+    Big_Phi_arr = Big_Phi.to_numpy()
     return Big_Phi
 
 
@@ -380,20 +381,20 @@ def gradPhi(x, y, z, var, grad2=1, g_main=1, g_sec=1, solar=1, corot=1):
     r, theta, phi = cart_to_sph(r_i[0], r_i[1], r_i[2])
     r_sec = np.sqrt(r_sec_i[0]**2+r_sec_i[1]**2+r_sec_i[2]**2)
     
-    n_surf1_x = np.cos(30)*r_i[0]-np.sin(30)*r_i[1]
-    n_surf1_y = np.sin(30)*r_i[0]-np.sin(30)*r_i[1]
+    n_surf1_x = np.cos(60)*r_i[0]-np.sin(60)*r_i[1]
+    n_surf1_y = np.sin(60)*r_i[0]+np.cos(60)*r_i[1]
     n_surf1_z = r_i[2]
     n_surf_1 = [n_surf1_x, n_surf1_y, n_surf1_z]
 
-    n_surf2_x = np.cos(-30)*r_i[0]-np.sin(-30)*r_i[1]
-    n_surf2_y = np.sin(-30)*r_i[0]-np.sin(-30)*r_i[1]
+    n_surf2_x = np.cos(-30)*r_i[0]-np.sin(-60)*r_i[1]
+    n_surf2_y = np.sin(-30)*r_i[0]+np.cos(-60)*r_i[1]
     n_surf2_z = r_i[2]
     n_surf_2 = [n_surf2_x, n_surf2_y, n_surf2_z]
     # n_surf_2 = n_surf_1 = -e_Sun
     
     cos_il1 = ilangle_cos(n_surf1_x,n_surf1_y,n_surf1_z,R_Sun[0],R_Sun[1],R_Sun[2])
     cos_il2 = ilangle_cos(n_surf2_x,n_surf2_y,n_surf2_z,R_Sun[0],R_Sun[1],R_Sun[2])
-    # cos_il1 = cos_il2 = 1 # APEX in no specific shape
+    cos_il1 = cos_il2 = 1 # APEX in no specific shape
     
     G_main = G_first(m_Did,r,r_i)
     G_sec = G_first(m_DidM,r_sec,r_sec_i)
@@ -659,7 +660,7 @@ def G_first(mf, rf,r_fi):
 "Initial Conditions"    
 class Initial_Conditions:
     
-    def __init__(self, variables, x0, y0, z0, vx0, vy0, vz0, Sunr0, Sun = 1, Shadow = 1, plotting = 0):
+    def __init__(self, variables, x0, y0, z0, vx0, vy0, vz0, Sunr0, Sun = 1, Shadow = 1, plotting = 0, orbit_number=0):
         "Initial Conditions, self belongs to Initial_Conditions here"
         self.rAPEX_x0 = x0 # m
         self.rAPEX_y0 = y0 # m
@@ -671,6 +672,7 @@ class Initial_Conditions:
         self.Sunr0 = Sunr0
         self.t0 = const.t0
         self.plotting = plotting
+        self.orbit_number = orbit_number
     
         self.r_Didymoon_x0 = variables.r_Didymoon_i[0][0] = variables.r_Didymoon_x[0] = const.a-const.a*const.e
         self.r_Didymoon_y0 = variables.r_Didymoon_i[1][0] = variables.r_Didymoon_y[0] = 0
@@ -682,12 +684,13 @@ class Initial_Conditions:
         
     def initialize_initial_conditions(self, variables):
         variables.rAPEX_y[0] = self.rAPEX_y0
-        variables.rAPEX_x[0:const.N] = self.rAPEX_x0
+        variables.rAPEX_x[0] = self.rAPEX_x0
         variables.rAPEX_z[0] = self.rAPEX_z0
         variables.rAPEX_r[0], variables.rAPEX_theta[0], variables.rAPEX_phi[0] = cart_to_sph(self.rAPEX_x0, self.rAPEX_y0, self.rAPEX_z0)
         variables.rAPEX_r_corot[0], variables.rAPEX_theta_corot[0], variables.rAPEX_phi_corot[0] = corot_frame(variables.rAPEX_x[0], variables.rAPEX_y[0], variables.rAPEX_z[0], variables.r_Didymoon_phi[0]) 
         variables.rAPEX_x_corot[0], variables.rAPEX_y_corot[0], variables.rAPEX_z_corot[0] = sph_to_cart_coord(variables.rAPEX_r_corot[0], variables.rAPEX_theta_corot[0], variables.rAPEX_phi_corot[0])
-            
+        
+        variables.orbit_number = self.orbit_number
         
         variables.vAPEX_x[0] = self.vAPEX_x0
         variables.vAPEX_y[0] = self.vAPEX_y0

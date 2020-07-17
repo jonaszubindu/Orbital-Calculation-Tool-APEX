@@ -28,12 +28,12 @@ m_DidM = 3.45E+9
 T = 11.92*3600 #s
 a = 1.178E+3 #m
 n = np.sqrt(G*(m_DidM+m_Did)/a**3)
-e = 0 # 0.05 in literature
+e = 0 #0.05 # in literature
 b = np.sqrt(a**2*(1-e**2))
 p = a*(1-e**2)
 orb_pole_A = (300,-60)
 orb_pole_B = (310,-84)
-i = 0 #none given in literature
+i = 0 # seasonal effects with changing inclination
 
 a_Did = 395 # m
 b_Did = 390 # m
@@ -41,14 +41,14 @@ c_Did = 370 # m
 omega = 2*np.pi/T
 
 "Time steps"
-dt = 10 #s
-rev = 2 #number of revolutions of Didymoon
-T_max = int(rev*T/dt)
+dt = 100 #s
+rev = 1 #number of revolutions of Didymoon
+T_max = rev*T
 t0 = 0
-N = T_max
+N = int(T_max/dt)
 
 
-"Solarpanel Surface vector 1 + 2"
+"Solarpanel Surface 1 + 2"
 S_1 = 0.0828258 #m^2, surface area solar panel 1
 S_2 = S_1 #surface area solar panel 2
 SC_1 = S_2 #surface area s/c 1

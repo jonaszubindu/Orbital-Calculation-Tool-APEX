@@ -3,8 +3,8 @@
 """
 Created on Wed Feb  5 10:30:24 2020
 
-This is a full physics orbital simulation software for a double comet system with a small probe 
-The simulation checks automatically if there are data available to use for the Kepler Orbit of the 
+This is a full physics orbital simulation software for a double comet system with a small probe
+The simulation checks automatically if there are data available to use for the Kepler Orbit of the
 secondary body. If you change something in the file 'constants.py' to try to investigate different scenarios,
 you must compute the new Kepler orbit. This can be achieved by simply deleting the 'Kepler.json' file and
 reload the program.
@@ -42,27 +42,27 @@ import logging
 from matplotlib import patches, ticker
 from joblib import Parallel, delayed
 import json
-import concurrent.futures
+import seaborn
+from Initializer import end_to_init, create_initials
 
-os.system('rm Orbit_Test_Simulation.log')
-logging.basicConfig(filename='Orbit_Test_Simulation.log', level= logging.DEBUG)
+# logging.basicConfig(filename='Orbit_Test_Simulation.log', level= logging.INFO, format='%(asctime)s:%(level)s:%(message)s')
 kwargs_list = []
-
-with open('Initial_Conditions.json', 'r') as inits: #Writing initial conditions from JSON file to a list
-    for line in inits:
-        kwargs_list.append(json.loads(line))
-        
-# with open('Stable_Orbits.json', 'r') as inits: #Writing initial conditions from JSON file to a list
-#     for line in inits:
-#         kwargs_list.append(json.loads(line))
-def do_smth_arbitrary(sec):
-    time.sleep(sec)
-    print("hello world!")
+Sun = Shadow = 1 # Tells if Shadow is turned on or off.
+kwargs_list = create_initials(Sun, Shadow)
+original_initials = kwargs_list
 
 
+# with open('Initial_Conditions1.json', 'r') as Init:
+#     original_initials = json.load(Init)
+    
+# if type(original_initials) != list:
+#     original_initials = [original_initials]
+
+# kwargs_list = original_initials
+    
 "Main od"
 def Orbital_Calculation(initials, variables, kwarg):
-        
+
         v = ode(meth.fun).set_integrator('dop853') #fun is the righthandside of the differential equation, defined in class_ods
         vy0 = initials.vy0
         t0 = initials.t0
@@ -71,38 +71,38 @@ def Orbital_Calculation(initials, variables, kwarg):
         print('ODE solver successfully initialized...')
         time.sleep(1)
         unstable = 0
-        percentage = 0
+        # percentage = 0
         "TIME LOOPs"
-    
-        
-        "Integration of differential equation" 
-        while variables.tn<(const.T_max-1) and v.successful():
-            
+
+
+        "Integration of differential equation"
+        while variables.tn<(const.N) and v.successful():
+
             ######################################
             #                                    #
             #   Define breaking arguments here   #
             #                                    #
             ######################################
-            
+
             v.get_return_code()
             variables.tn += 1
             v.integrate(v.t+const.dt)
-            
-            if variables.tn % int(const.T_max/10) == 0 and variables.tn > 0:
-                percentage += 1
-                print('Progress: {} %'.format(percentage*10))
-            
+
+            # if variables.tn % int(const.N/10) == 0 and variables.tn > 0:
+                # percentage += 1
+                # print('Progress: {} %'.format(percentage*10))
+
             variables.vAPEX_x[variables.tn] = v.y[0]
             variables.vAPEX_y[variables.tn] = v.y[1]
             variables.vAPEX_z[variables.tn] = v.y[2]
             variables.rAPEX_x[variables.tn] = v.y[3]
             variables.rAPEX_y[variables.tn] = v.y[4]
             variables.rAPEX_z[variables.tn] = v.y[5]
-            
+
             variables.r_Didymoon_x[variables.tn] = variables.r_Didymoon_i[0][variables.tn]
             variables.r_Didymoon_y[variables.tn] = variables.r_Didymoon_i[1][variables.tn]
             variables.r_Didymoon_z[variables.tn] = variables.r_Didymoon_i[2][variables.tn]
-            
+
             r = np.sqrt(variables.rAPEX_x[variables.tn]**2+variables.rAPEX_y[variables.tn]**2+variables.rAPEX_z[variables.tn]**2)
             r_sec = 0
             r_sec_i = np.zeros(3, dtype = np.float128)
@@ -110,130 +110,164 @@ def Orbital_Calculation(initials, variables, kwarg):
             r_sec_i[1] = variables.rAPEX_y[variables.tn]-variables.r_Didymoon_y[variables.tn]
             r_sec_i[2] = variables.rAPEX_z[variables.tn]-variables.r_Didymoon_z[variables.tn]
 
-            
+
             r_sec = np.sqrt(r_sec_i[0]**2+r_sec_i[1]**2+r_sec_i[2]**2)
             variables.t_real[variables.tn] = v.t+const.dt
-            variables.rAPEX_r_corot[variables.tn], variables.rAPEX_theta_corot[variables.tn], variables.rAPEX_phi_corot[variables.tn] = meth.corot_frame(variables.rAPEX_x[variables.tn], variables.rAPEX_y[variables.tn], variables.rAPEX_z[variables.tn], variables.r_Didymoon_phi[variables.tn]) 
+            variables.rAPEX_r_corot[variables.tn], variables.rAPEX_theta_corot[variables.tn], variables.rAPEX_phi_corot[variables.tn] = meth.corot_frame(variables.rAPEX_x[variables.tn], variables.rAPEX_y[variables.tn], variables.rAPEX_z[variables.tn], variables.r_Didymoon_phi[variables.tn])
             variables.rAPEX_x_corot[variables.tn], variables.rAPEX_y_corot[variables.tn], variables.rAPEX_z_corot[variables.tn] = meth.sph_to_cart_coord(variables.rAPEX_r_corot[variables.tn], variables.rAPEX_theta_corot[variables.tn], variables.rAPEX_phi_corot[variables.tn])
-            
+
             # "Lagrange points stable orbits criteria"
             # r_L_x = variables.rAPEX_x_corot[0]-variables.rAPEX_x_corot[variables.tn]
             # r_L_y = variables.rAPEX_y_corot[0]-variables.rAPEX_y_corot[variables.tn]
             # r_L_z = variables.rAPEX_z[0]-variables.rAPEX_z[variables.tn]
-            # r_L = np.sqrt(r_L_x**2 + r_L_y**2 + r_L_z**2) 
-            
-            if r>10*const.a: #or r_L>1000:
+            # r_L = np.sqrt(r_L_x**2 + r_L_y**2 + r_L_z**2)
+
+            if r>6*const.a:
                 print("APEX left the Lagrange point, unstable", variables.t_real[variables.tn])
                 unstable = 1
                 break
             if r < const.RadDm:
                 print("APEX crashed on Didymos.", variables.t_real[variables.tn])
-                unstable = 1
+                unstable = 2
                 break
-            if r_sec < const.RadDM: 
+            if r_sec < const.RadDM:
                 print("APEX crashed on Didymoon", variables.t_real[variables.tn])
-                unstable = 1
+                unstable = 3
                 break
-            
-        rAPEX_x = variables.rAPEX_x
-        rAPEX_y = variables.rAPEX_y
-        rAPEX_z = variables.rAPEX_z
-        r_Didymoon_x = variables.r_Didymoon_x
-        r_Didymoon_y = variables.r_Didymoon_y
-        r_Didymoon_z = variables.r_Didymoon_z
-        Tn = variables.tn
+
+        # rAPEX_x = variables.rAPEX_x
+        # rAPEX_y = variables.rAPEX_y
+        # rAPEX_z = variables.rAPEX_z
+        # r_Didymoon_x = variables.r_Didymoon_x
+        # r_Didymoon_y = variables.r_Didymoon_y
+        # r_Didymoon_z = variables.r_Didymoon_z
+        # Tn = variables.tn
         print("Test successfully completed, trying next orbit...")
         print('successfully executed run for ')
         str_elem = ""
         for elem in kwarg.keys():
             str_elem = str_elem + elem + ':' + str(kwarg[elem]) + ' '
         print(str_elem)
-                
-        return unstable, str_elem, rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn
+
+        return unstable, str_elem
 
 
 "2D-plot of the collective trajectories from a single run"
 
 plt.clf()
 fig1 = plt.figure(figsize = (15,14))
-plt.style.use("fivethirtyeight")
+plt.grid(b=True)
 ax1 = fig1.add_subplot(111)
 ax1.set_xlim(-2000,2000)
 ax1.set_ylim(-2000,2000)
-ax1.set_xlabel("x-coordinate")
-ax1.set_ylabel("y-coordinate")
-ax1.set_title("Orbit of APEX in corotating frame")
+ax1.set_xlabel("x-coordinate [m]", fontsize = 24)
+ax1.set_ylabel("y-coordinate [m]", fontsize = 24)
+ax1.set_title("Orbit of APEX in corotating frame", fontsize = 30)
+ax1.tick_params(labelsize = 20)
+Didymos_shape2 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
+Didymoon_shape2 = patches.Circle(xy = (const.a*(1+const.e) , 0), radius = const.RadDM)
+ax1.add_patch(Didymos_shape2) 
+ax1.add_patch(Didymoon_shape2)
+
 
 "Loop that executes the simulation "
-
-Args = [] #Store the initial conditions from kwargs_list
-Orbit_Times = [] # Store the computation time of each orbit calculation
-Stable_Orbits = [] # Store the stable orbits
-Orbits = [] # Store any computed orbit
-Var = [] # Store any initialized orbit variables (used for parallel computation)
-Initials = [] # Store all initial conditions initialized (used for parallel computation)
-# results = [] # Store the results calculated by the parallel computation
-itern = 0 # count the number of orbits computed
-Stable = 0 # count the number of stable orbits
-
 def run_orbit_sim(Orbital_Calculation, initials, var, kwarg):
     stable = 0
     start = timeit.timeit()
-    try:    
-        unstable, str_elem, rAPEX_x, rAPEX_y, rAPEX_z, r_Didymoon_x, r_Didymoon_y, r_Didymoon_z, Tn = Orbital_Calculation(initials, var, kwarg)
-    except Exception:
+    try:
+        unstable, str_elem = Orbital_Calculation(initials, var, kwarg)
+    except Exception as ex:
         str_elem = ""
         for elem in kwarg.keys():
             str_elem = str_elem + elem + ':' + str(kwarg[elem]) + ' '
         print('Orbit not computable for ' + str_elem + 'continuing with next orbit...')
-    
-    
+        unstable = 4
+        exception = ex
+
     if unstable == 0:
         stable = 1
-    
+
     stop = timeit.timeit()
     time_orbit_calc = stop - start
     orbit = var
-    return stable, orbit, time_orbit_calc
+    return stable, orbit, time_orbit_calc, initials, unstable
 
-
-
-for kwargs in kwargs_list:
-    print("Number of sets of initial conditions: ", itern, ":",len(kwargs_list))
-    args = np.array([kwargs], dtype = object)
-    var_init = var.Variables(const.N)
+t_real_tot, t_real_tot_days = [np.zeros(len(kwargs_list)) for _ in range(2)] # store the orbitlifetimes
+m = 1 # Loop counter
+while True:
     
-    for kwarg in args:
-        initials = meth.Initial_Conditions(var_init, **kwarg)
-    initials.initialize_initial_conditions(var_init)
-    initials.wrap(var_init)
-    Args.append(kwarg)
-    "Choosing initial conditions"
-    itern +=1
-    var_init.E_end = initials.E
-    Var.append(var_init)
-    Initials.append(initials)
-    # stable, orbit, time_orbit_calc = run_orbit_sim(Orbital_Calculation, initials, var_init, kwarg)
-    # Orbit_Times.append(time_orbit_calc)
-    # if stable == 1:
-    #     Stable += 1
-    #     Stable_Orbits.append(orbit)
-    # Orbits.append(orbit)
-    # ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
-
-"Parallelization of computation of orbits"
-# 
-results = Parallel(n_jobs = 4)(delayed(run_orbit_sim)(Orbital_Calculation, initials, var_ele, kwarg) for initials, var_ele, kwarg in zip(Initials, Var, Args))
-for result in results:
-    stable = result[0]
-    orbit = result[1] 
-    time_orbit_calc = result[2]
-    Orbit_Times.append(time_orbit_calc)
-    if stable == 1:
-        Stable += 1
-        Stable_Orbits.append(orbit)
-    Orbits.append(orbit)
-    ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
+    Args = [] #Store the initial conditions from kwargs_list
+    Orbit_Times = [] # Store the computation time of each orbit calculation
+    Stable_Orbits = [] # Store the stable orbits
+    Orbits = [] # Store any orbits
+    Var = [] # Store any initialized orbit variables (used for parallel computation)
+    Initials = [] # Store all initial conditions initialized (used for parallel computation)
+    # results = [] # Store the results calculated by the parallel computation
+    Stable = 0 # count the number of stable orbits
+    
+    for n,kwargs in enumerate(kwargs_list):
+        print("Number of sets of initial conditions: ", n+1, ":",len(kwargs_list))
+        args = np.array([kwargs], dtype = object)
+        var_init = var.Variables(const.N)
+    
+        for kwarg in args:
+            initials = meth.Initial_Conditions(var_init, **kwarg)
+        initials.initialize_initial_conditions(var_init)
+        initials.wrap(var_init)
+        Args.append(kwarg)
+        "Choosing initial conditions"
+        var_init.E_end = initials.E
+        Var.append(var_init)
+        Initials.append(initials)
+        # stable, orbit, time_orbit_calc, initials = run_orbit_sim(Orbital_Calculation, initials, var_init, kwarg)
+        # Orbit_Times.append(time_orbit_calc)
+        # if stable == 1:
+        #     Stable += 1
+            # Stable_Orbits.append(orbit)
+        # Orbits.append(orbit)
+            # ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
+    
+    """ Parallelization of computation of orbits """
+    # colors = ('k','r')
+    results = Parallel(n_jobs = 4, backend='loky')(delayed(run_orbit_sim)(Orbital_Calculation, initials, var_ele, kwarg) for initials, var_ele, kwarg in zip(Initials, Var, Args))
+    # n = 0
+    for result in results:
+        stable = result[0]
+        orbit = result[1]
+        # exception = result[4]
+        unstable = result[4]
+        n = orbit.orbit_number
+        time_orbit_calc = result[2]
+        Orbit_Times.append(time_orbit_calc)
+        if stable == 1:
+            Stable += 1
+            Stable_Orbits.append(orbit)
+            t_real_tot[n] = t_real_tot[n] + orbit.t_real[-1]
+        if stable == 1:
+            ax1.plot(orbit.rAPEX_x_corot[0:orbit.tn], orbit.rAPEX_y_corot[0:orbit.tn], linewidth=1, color = 'k')
+        else:   
+            Orbits.append(orbit)
+            t_real_tot[n] = t_real_tot[n] + max(orbit.t_real)
+        t_real_tot_days[n] = t_real_tot[n]/3600/24 # Orbit lifetime in days.
+        # n += 1
+    if Stable_Orbits == [] or any(i >= 30 for i in t_real_tot_days):
+        kwargs_list_end = kwargs_list
+        break
+    if unstable == 1:
+        print("APEX left the Lagrange point, unstable")
+    if unstable == 2:
+        print("APEX crashed on Didymos.")
+    if unstable == 3:
+        print("APEX crashed on Didymoon.")
+    if unstable == 4:
+        print("Orbit not computable")
+    
+    kwargs_list = end_to_init(Stable_Orbits, Sun, Shadow)
+    print(f"Revolutions computed:{m} and max orbit lifetime {max(t_real_tot_days)}")
+    m += 1
+    
+    
+    
 
 
 "Storing data, work in progress"
@@ -248,11 +282,7 @@ for result in results:
 #         Orbits.write('\n')
 
 "Continue Plotting here"
-Didymos_shape2 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
-Didymoon_shape2 = patches.Circle(xy = (Var[0].r_Didymoon_x[0],0), radius = const.RadDM)
-ax1.add_patch(Didymos_shape2)
-ax1.add_patch(Didymoon_shape2)
-Unstable = len(kwargs_list) - Stable
+Unstable = len(original_initials) - Stable
 
 textstr1 = ""
 file_name1 = ""
@@ -285,18 +315,18 @@ file_name1 = file_name1 + '.eps'
 plt.tight_layout()
 plt.show()
 fig1.savefig(file_name1, format='eps')
-    
+
 "3D-Plot"
-    
+
 # def get_proj_scale(self):
-#     """                                                                                                                                                                                                                                    
-#     Create the projection matrix from the current viewing position.                                                                                                                                                                        
+#     """
+#     Create the projection matrix from the current viewing position.
 
-#     elev stores the elevation angle in the z plane                                                                                                                                                                                         
-#     azim stores the azimuth angle in the x,y plane                                                                                                                                                                                         
+#     elev stores the elevation angle in the z plane
+#     azim stores the azimuth angle in the x,y plane
 
-#     dist is the distance of the eye viewing point from the object                                                                                                                                                                          
-#     point.                                                                                                                                                                                                                                 
+#     dist is the distance of the eye viewing point from the object
+#     point.
 
 #     """
 #     relev, razim = np.pi * self.elev/180, np.pi * self.azim/180
@@ -305,13 +335,13 @@ fig1.savefig(file_name1, format='eps')
 #     ymin, ymax = self.get_ylim3d()
 #     zmin, zmax = self.get_zlim3d()
 
-#     # transform to uniform world coordinates 0-1.0,0-1.0,0-1.0                                                                                                                                                                             
+#     # transform to uniform world coordinates 0-1.0,0-1.0,0-1.0
 #     worldM = proj3d.world_transformation(
 #         xmin, xmax,
 #         ymin, ymax,
 #         zmin, zmax)
 
-#     # look into the middle of the new coordinates                                                                                                                                                                                          
+#     # look into the middle of the new coordinates
 #     R = np.array([0.5, 0.5, 0.5])
 
 #     xp = R[0] + np.cos(razim) * np.cos(relev) * self.dist
@@ -324,7 +354,7 @@ fig1.savefig(file_name1, format='eps')
 #     self.vvec = self.vvec / proj3d.mod(self.vvec)
 
 #     if abs(relev) > np.pi/2:
-#     # upside down                                                                                                                                                                                                                          
+#     # upside down
 #       V = np.array((0, 0, -1))
 #     else:
 #       V = np.array((0, 0, 1))
@@ -337,19 +367,19 @@ fig1.savefig(file_name1, format='eps')
 
 #     return np.dot(M, scale);
 
-# #Make sure these are floating point values:                                                                                                                                                                                              
+# #Make sure these are floating point values:
 # scale_x = 12.0
 # scale_y = 12.0
 # scale_z = 5.0
 
-# #Axes are scaled down to fit in scene                                                                                                                                                                                                    
+# #Axes are scaled down to fit in scene
 # max_scale=max(scale_x, scale_y, scale_z)
 
 # scale_x=scale_x/max_scale
 # scale_y=scale_y/max_scale
 # scale_z=scale_z/max_scale
 
-# #Create scaling matrix                                                                                                                                                                                                                   
+# #Create scaling matrix
 # scale = np.array([[scale_x,0,0,0],
 #                   [0,scale_y,0,0],
 #                   [0,0,scale_z,0],
@@ -375,7 +405,7 @@ fig1.savefig(file_name1, format='eps')
 # # plt.show()
 
 
-    
+
 # Didymos_shape1 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
 # Didymoon_shape1 = patches.Circle(xy = (r_Didymoon_x[0],0), radius = const.RadDM)
 
@@ -420,29 +450,31 @@ fig1.savefig(file_name1, format='eps')
 
 # fig1.savefig('Test_fig.png', format='png')
 # plt.show()
-    
-    
+
+
 """
 
 Contour Plots to visualize the gravitational potential contour lines, obtionally also the force vectors acting in the different regions
 
 """
-    
+# plt.clf()
 # textstr = ""
 # file_name = ""
 
 # cmap = plt.cm.get_cmap("winter")
 # cmap.set_under("magenta")
 # cmap.set_over("yellow")
-    
+
 # f = plt.figure(figsize = (15,14))
-# plt.style.use("fivethirtyeight")
+# plt.grid(b=True)
 # ax = f.add_subplot(111)
 # ax.set_xlim(-1600,1600)
 # ax.set_ylim(-1600,1600)
-# ax.set_xlabel("x-coordinate")
-# ax.set_ylabel("y-coordinate")
-# ax.set_title("Forcefield and Gravitational Potential")
+# ax.set_xlabel("x-coordinate [m]", fontsize = 24)
+# ax.set_ylabel("y-coordinate [m]", fontsize = 24)
+# ax.set_title("Gravitational Potential Didymos", fontsize = 30)
+# ax.tick_params(labelsize = 20)
+# ax.set_facecolor('white')
 # xs = np.linspace(-1600, 1600, 2000)
 # ys = np.linspace(-1600, 1600, 2000)
 # zs = np.linspace(-1600, 1600, 2000)
@@ -458,17 +490,26 @@ Contour Plots to visualize the gravitational potential contour lines, obtionally
 # ZF = np.zeros_like(XF)
 
 # corot = 1
-# Text_box, F = meth.gradPhi(XF, YF, ZF, Var, grad2 = 1, g_main = 1, g_sec = 1, solar = 0, corot=1)
+# Text_box, F = meth.gradPhi(XF, YF, ZF, Var[0], grad2 = 1, g_main = 1, g_sec = 1, solar = 0, corot=1)
 # # cf = ax.quiver(XF, YF, F[0], F[1])
-# Big_Phi = meth.Phi(XS, YS, ZS, Var, grad2 = 1, g_main = 1, g_sec = 1, corot=corot)
-# cs = ax.contour(XS, YS, Big_Phi, levels = 100, cmap=cmap, linewidths=0.7) #/np.mean(np.mean(Big_Phi))
+# Big_Phi = meth.Phi(XS, YS, ZS, Var[0], grad2 = 1, g_main = 1, g_sec = 1, corot=corot)
+# Big_Phi_arr_med = []
+# for i in range(len(Big_Phi[0])):
+#     Big_Phi_arr_med.extend(Big_Phi[i])
+# Big_Phi_arr_med.sort()
+# if len(Big_Phi)%2 == 0: 
+#     median = Big_Phi_arr_med[int(len(Big_Phi)/2)]
+# else:
+#     median = Big_Phi_arr_med[int((len(Big_Phi)-1)/2)]
+
+# cs = ax.contour(XS, YS, Big_Phi, levels = 100, cmap=cmap, linewidths=0.7)
 # ax.clabel(cs, inline=1, fontsize=10)
 # Didymos_shape2 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
-# Didymoon_shape2 = patches.Circle(xy = (r_Didymoon_x[0],0), radius = const.RadDM)
+# Didymoon_shape2 = patches.Circle(xy = (Orbits[0].r_Didymoon_x[0],0), radius = const.RadDM)
 # ax.add_patch(Didymos_shape2)
 # ax.add_patch(Didymoon_shape2)
 # for name in Text_box:
-#     textstr = textstr + name + '\n'   
+#     textstr = textstr + name + '\n'
 #     file_name = file_name + str.split(name, sep = ' ')[0] + '_' + str.split(name, sep = ' ')[1] + '_'
 
 # textstr = textstr[0:-1]
@@ -481,12 +522,12 @@ Contour Plots to visualize the gravitational potential contour lines, obtionally
 # plt.tight_layout()
 # plt.show()
 # f.savefig(file_name, format='eps')
-        
-         
-        
-        
-        
-"Forcefield plots"    
+
+
+
+
+
+"Forcefield plots"
 # textstr = ""
 # file_name = ""
 
@@ -509,7 +550,7 @@ Contour Plots to visualize the gravitational potential contour lines, obtionally
 
 # X, Y = np.meshgrid(xs, ys)
 # Z = np.zeros_like(X)
-    
+
 # Text_box, Big_Phi = meth.Phi(X, Y, Z, Var, grad2 = 1, g_main = 1, g_sec = 1)
 # cs = ax.contourf(X, Y, Big_Phi, levels = 20, cmap=cmap) #/np.mean(np.mean(Big_Phi))
 
@@ -520,7 +561,7 @@ Contour Plots to visualize the gravitational potential contour lines, obtionally
 # # ax.add_patch(Didymos_shape2)
 # # ax.add_patch(Didymoon_shape2)
 # for name in Text_box:
-#     textstr = textstr + name + '\n'   
+#     textstr = textstr + name + '\n'
 #     file_name = file_name + str.split(name, sep = ' ')[0] + '_' + str.split(name, sep = ' ')[1] + '_'
 
 # textstr = textstr[0:-1]
@@ -531,6 +572,35 @@ Contour Plots to visualize the gravitational potential contour lines, obtionally
 # plt.tight_layout()
 # plt.show()
 # f.savefig(file_name, format='eps')
-    
-        
-        
+
+
+""" Orbit Lifetime plot, used as a stability criteria """
+
+plt.clf()
+fig2 = plt.figure(figsize = (18,14))
+plt.grid(b=True)
+ax2 = fig2.add_subplot(111)
+ax2.set_xlim(-2000,2000)
+ax2.set_ylim(-2000,2000)
+ax2.set_xlabel("x-coordinate [m]", fontsize = 24)
+ax2.set_ylabel("y-coordinate [m]", fontsize = 24)
+ax2.set_title("Orbit Lifetime from initial conditions of APEX in corotating frame", fontsize = 30)
+ax2.tick_params(labelsize = 20)
+Didymos_shape3 = patches.Ellipse(xy = (0,0), width = 2*const.a_Did,height = 2*const.b_Did)
+Didymoon_shape3 = patches.Circle(xy = (const.a*(1+const.e) , 0), radius = const.RadDM)
+ax2.add_patch(Didymos_shape3) 
+ax2.add_patch(Didymoon_shape3)
+x, y, t = [np.zeros(len(original_initials)) for _ in range(3)]
+for n,initial in enumerate(original_initials):
+    x[n] = initial["x0"]
+    y[n] = initial["y0"]
+    t[n] = t_real_tot_days[n]
+im = ax2.scatter(x, y, c=t, lw=8, s=10, marker="s", cmap='viridis', vmin = 0, vmax = 30)
+fig2.colorbar(im).set_label('Orbit Lifetime', fontsize=20)
+plt.tight_layout()
+plt.show()
+
+fig2.savefig(f"Orbit_Lifetime_{len(original_initials)}-orbits.eps")
+
+
+
